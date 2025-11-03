@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "title": "Remera azul",
+    "description": "Remera 100% algodón",
+    "code": "R001",
+    "price": 1200,
+    "status": true,
+    "stock": 15,
+    "category": "ropa",
+    "thumbnails": [
+      "imagen1.jpg"
+    ]
+  }
+]

@@ -11,5 +11,18 @@
     "thumbnails": [
       "imagen1.jpg"
     ]
+  },
+  {
+    "id": 2,
+    "title": "Remera negra",
+    "description": "Remera algodón",
+    "code": "R123",
+    "price": 3000,
+    "status": true,
+    "stock": 10,
+    "category": "ropa",
+    "thumbnails": [
+      "/images/remera1.jpg"
+    ]
   }
 ]

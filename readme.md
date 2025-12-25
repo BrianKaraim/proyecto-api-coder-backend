@@ -1,25 +1,24 @@
-# 🛍️ API de Productos y Carritos
+# 🛍️ API de Productos y Carritos – Backend
 
-Este proyecto es un **servidor RESTful** desarrollado con **Node.js**, **Express**, **Handlebars** y **WebSockets (Socket.io)**. Permite gestionar productos, carritos y una vista en tiempo real.
-
----
+Proyecto backend desarrollado con **Node.js**, **Express**, **MongoDB**, **Mongoose**, **Handlebars** y **Socket.io**.  
+Permite gestionar productos y carritos, renderizar vistas con paginación y mostrar información en tiempo real mediante WebSockets.
 
 ## 📁 Estructura del Proyecto
 
 mi-api/
 ├─ src/
-│  ├─ data/
-│  │  ├─ products.json
-│  │  └─ carts.json
-│  ├─ managers/
-│  │  ├─ productManager.js
-│  │  └─ cartManager.js
+│  ├─ config/
+│  │  └─ db.js
 │  ├─ routes/
 │  │  ├─ products.js
 │  │  └─ carts.js
+|  |  └─ views.js
+│  ├─ scripts/
+│  │  └─ migrate.js
 │  ├─ views/
-│  │  ├─ home.handlebars
-│  │  └─ realTimeProducts.handlebars
+│  │  ├─ products.handlebars
+│  │  ├─ productDetail.handlebars
+│  │  └─ cart.handlebars
 │  ├─ public/
 │  │  └─ js/
 │  │     └─ realtime.js
@@ -27,19 +26,17 @@ mi-api/
 ├─ package.json
 └─ README.md
 
-> Los archivos `products.json` y `carts.json` se crean automáticamente al ejecutar el servidor por primera vez.
-
----
+>---
 
 ## ⚙️ Tecnologías utilizadas
 
-* **Node.js**
-* **Express.js**
-* **Express-Handlebars**
-* **Socket.io**
-* **Body-parser**
-* **Nodemon**
-* **File System (fs)**
+- Node.js  
+- Express.js  
+- MongoDB  
+- Mongoose  
+- Express-Handlebars  
+- Socket.io  
+- Nodemon  
 
 ---
 
@@ -47,58 +44,50 @@ mi-api/
 
 ### 1️⃣ Clonar el repositorio
 
-```bash
-git clone https://github.com/BrianKaraim/proyecto-api-coder-backend.git
+git clone <https://github.com/BrianKaraim/proyecto-api-coder-backend.git>
 cd mi-api
-```
-
-### 2️⃣ Inicializar el proyecto
-
-```bash
-npm init -y
-```
-
-### 3️⃣ Instalar dependencias
-
-```bash
-npm install express express-handlebars socket.io body-parser
-npm install --save-dev nodemon
-```
-
-### 4️⃣ Scripts en package.json
-
-```json
-"scripts": {
-  "start": "node src/index.js",
-  "dev": "nodemon src/index.js"
-}
-```
-
-### 5️⃣ Ejecutar el servidor
-
-```bash
+2️⃣ Instalar dependencias
+npm install
+3️⃣ Configurar MongoDB
+La conexión a la base de datos se encuentra en:
+src/config/db.js
+Ejemplo de conexión local:
+mongoose.connect("mongodb://127.0.0.1:27017/mi-api");
+Asegurarse de tener MongoDB ejecutándose localmente.
+4️⃣ Ejecutar el servidor
 npm run dev
-```
+El servidor quedará escuchando en:
+👉 <http://localhost:8080>
 
-El servidor escuchará en:
-👉 **[http://localhost:8080](http://localhost:8080)**
+### 📦 Endpoints – Productos
 
----
-
-# 🧩 Endpoints disponibles
-
-## 📦 Productos (`/api/products`)
-
-| Método     | Endpoint             | Descripción                   |
-| ---------- | -------------------- | ----------------------------- |
-| **GET**    | `/api/products`      | Lista todos los productos     |
-| **GET**    | `/api/products/:pid` | Obtiene un producto por su ID |
-| **POST**   | `/api/products`      | Crea un nuevo producto        |
-| **DELETE** | `/api/products/:pid` | Elimina un producto           |
-
-#### Ejemplo de creación (`POST /api/products`)
-
-```json
+Base:
+/api/products
+GET /api/products
+Permite filtros, paginación y ordenamiento mediante query params:
+limit → cantidad de productos por página (default: 10)
+page → número de página (default: 1)
+sort → asc | desc (orden por precio)
+query → filtra por categoría o disponibilidad
+Ejemplo:
+/api/products?limit=10&page=1&sort=asc
+Respuesta:
+{
+  "status": "success",
+  "payload": [],
+  "totalPages": 1,
+  "prevPage": null,
+  "nextPage": null,
+  "page": 1,
+  "hasPrevPage": false,
+  "hasNextPage": false,
+  "prevLink": null,
+  "nextLink": null
+}
+GET /api/products/:pid
+Obtiene un producto por su ID.
+POST /api/products
+Crea un nuevo producto.
 {
   "title": "Remera verde",
   "description": "Remera 100% algodón",
@@ -107,149 +96,61 @@ El servidor escuchará en:
   "status": true,
   "stock": 20,
   "category": "ropa",
-  "thumbnails": ["imagen20.jpg"]
+  "thumbnails": ["imagen.jpg"]
 }
-```
+PUT /api/products/:pid
+Actualiza un producto existente.
+DELETE /api/products/:pid
+Elimina un producto por ID.
 
----
+### 🛒 Endpoints – Carritos
 
-## 🛒 Carritos (`/api/carts`)
+Base:
+/api/carts
+POST /api/carts
+Crea un carrito vacío.
+GET /api/carts/:cid
+Obtiene un carrito específico con los productos completos utilizando populate.
+POST /api/carts/:cid/products/:pid
+Agrega un producto al carrito o incrementa su cantidad si ya existe.
+PUT /api/carts/:cid
+Actualiza todos los productos del carrito recibiendo un arreglo.
+PUT /api/carts/:cid/products/:pid
+Actualiza únicamente la cantidad de un producto específico.
+DELETE /api/carts/:cid/products/:pid
+Elimina un producto del carrito.
+DELETE /api/carts/:cid
+Vacía completamente el carrito.
 
-| Método   | Endpoint                       | Descripción                       |
-| -------- | ------------------------------ | --------------------------------- |
-| **POST** | `/api/carts`                   | Crea un nuevo carrito             |
-| **GET**  | `/api/carts/:cid`              | Lista los productos de un carrito |
-| **POST** | `/api/carts/:cid/product/:pid` | Agrega un producto al carrito     |
+### 🖥️ Vistas – Handlebars
 
----
+/products
+Lista de productos renderizados
+Paginación
+Botón para agregar productos al carrito
+Enlace al detalle del producto
+/products/:pid
+Vista de detalle del producto
+Información completa
+Botón para agregar al carrito
+/carts/:cid
+Visualización de un carrito específico
+Productos renderizados con populate
+Cantidades visibles por producto
+⚡ WebSockets – Socket.io
+El proyecto utiliza Socket.io para manejar comunicación en tiempo real:
+Actualización automática de datos
+Comunicación cliente-servidor
+Sin recargar la página
+Se utiliza tanto en el backend como en scripts del cliente.
 
-# 💾 Persistencia
+### 🎯 Funcionalidades implementadas
 
-La información se guarda en archivos JSON dentro de `src/data`:
-
-* `products.json`: almacena todos los productos.
-* `carts.json`: almacena los carritos.
-
----
-
-# 🧠 Managers
-
-### **ProductManager**
-
-Se encarga de:
-
-* Leer productos
-* Agregar nuevos
-* Eliminar
-* Buscar por ID
-
-### **CartManager**
-
-Maneja:
-
-* Creación de carritos
-* Agregado de productos
-* Incremento de cantidades
-
----
-
-# 🧩 Handlebars + WebSockets
-
-Esta entrega agrega **vistas renderizadas**, **interacción dinámica en tiempo real** y **actualización automática** mediante WebSockets.
-
----
-
-## 🎨 Configuración de Handlebars
-
-El servidor usa Handlebars como motor de plantillas:
-
-```js
-app.engine('handlebars', engine());
-app.set('view engine', 'handlebars');
-app.set('views', path.join(__dirname, 'src/views'));
-```
-
----
-
-## 🏡 Vista principal: `home.handlebars`
-
-Muestra la lista de productos cargados hasta el momento obtenidos desde el backend.
-
-Ruta:
-👉 **GET /**
-
-```handlebars
-<ul>
-  {{#each products}}
-    <li>{{this.title}} - ${{this.price}}</li>
-  {{/each}}
-</ul>
-```
-
----
-
-## ⚡ Vista en tiempo real: `realTimeProducts.handlebars`
-
-Ruta:
-👉 **GET /realtimeproducts**
-
-Esta vista usa **WebSockets** para:
-
-* Mostrar productos en tiempo real
-* Actualizar la lista al crear o eliminar productos
-
-Incluye un formulario para agregar productos vía HTTP, pero se actualiza vía **Socket.io**.
-
-```html
-<script src="/socket.io/socket.io.js"></script>
-<script src="/js/realtime.js"></script>
-```
-
----
-
-# 🔌 WebSockets (Socket.io)
-
-El servidor crea una instancia de Socket.io:
-
-```js
-const io = new Server(server);
-```
-
-Cuando se crea o elimina un producto desde la API, el router emite:
-
-```js
-io.emit("updateProducts", products);
-```
-
-Esto permite que la vista `realTimeProducts` reciba automáticamente los cambios sin recargar la página.
-
----
-
-# 🧠 Scripts del cliente (`public/js/realtime.js`)
-
-Escucha los eventos enviados desde el servidor:
-
-```js
-const socket = io();
-
-socket.on("updateProducts", (products) => {
-  const list = document.getElementById("productList");
-  list.innerHTML = "";
-  products.forEach(p => {
-    list.innerHTML += `<li>${p.title} - $${p.price}</li>`;
-  });
-});
-```
-
----
-
-# 🎯 Conclusión
-
-El proyecto integra:
-
-✔ Motor de plantillas Handlebars
-✔ WebSockets con actualización automática
-✔ Vista tradicional y vista en tiempo real
-✔ API completa de productos y carritos
-
-El backend y frontend quedan conectados dinámicamente.
+✔ CRUD completo de productos
+✔ CRUD completo de carritos
+✔ Persistencia en MongoDB
+✔ Uso de Mongoose y populate
+✔ Paginación, filtros y ordenamiento
+✔ Vistas con Handlebars
+✔ WebSockets en tiempo real
+✔ Manejo de errores y validaciones

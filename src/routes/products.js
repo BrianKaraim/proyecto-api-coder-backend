@@ -1,59 +1,163 @@
-const express = require('express');
-const ProductManager = require('../managers/productManager');
+const express = require("express");
+const mongoose = require("mongoose");
+const Product = require("../models/Product");
 
-module.exports = (io) => {
-  const router = express.Router();
-  const pm = new ProductManager();
+const router = express.Router();
 
 
-  router.get('/', async (req, res) => {
-    try {
-      const products = await pm.getProducts();
-      res.json(products);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+router.get("/", async (req, res) => {
+  try {
+    const {
+      limit = 10,
+      page = 1,
+      sort,
+      query
+    } = req.query;
+
+    /* 🔎 Filtros */
+    const filter = {};
+
+    if (query) {
+      filter.$or = [
+        { category: query },
+        { status: query === "true" }
+      ];
     }
-  });
 
+    const options = {
+      limit: Number(limit),
+      page: Number(page),
+      lean: true
+    };
 
-  router.get('/:pid', async (req, res) => {
-    try {
-      const prod = await pm.getById(req.params.pid);
-      if (!prod) return res.status(404).json({ error: 'Producto no encontrado' });
-      res.json(prod);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    if (sort) {
+      options.sort = { price: sort === "asc" ? 1 : -1 };
     }
+
+    const result = await Product.paginate(filter, options);
+
+    res.json({
+      status: "success",
+      payload: result.docs,
+      totalPages: result.totalPages,
+      prevPage: result.prevPage,
+      nextPage: result.nextPage,
+      page: result.page,
+      hasPrevPage: result.hasPrevPage,
+      hasNextPage: result.hasNextPage,
+      prevLink: result.hasPrevPage
+        ? `/api/products?page=${result.prevPage}&limit=${limit}`
+        : null,
+      nextLink: result.hasNextPage
+        ? `/api/products?page=${result.nextPage}&limit=${limit}`
+        : null
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error: error.message
+    });
+  }
+});
+
+
+router.post("/", async (req, res) => {
+  try {
+    const product = await Product.create(req.body);
+
+    res.status(201).json({
+      status: "success",
+      payload: product
+    });
+
+  } catch (error) {
+    res.status(400).json({
+      status: "error",
+      error: error.message
+    });
+  }
+});
+
+
+router.put("/:pid", async (req, res) => {
+  const { pid } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(pid)) {
+    return res.status(400).json({
+      status: "error",
+      error: "ID inválido"
+    });
+  }
+
+  const updated = await Product.findByIdAndUpdate(
+    pid,
+    req.body,
+    { new: true, runValidators: true }
+  );
+
+  if (!updated) {
+    return res.status(404).json({
+      status: "error",
+      error: "Producto no encontrado"
+    });
+  }
+
+  res.json({
+    status: "success",
+    payload: updated
   });
+});
 
+router.get("/:pid", async (req, res) => {
+  const { pid } = req.params;
 
-  router.post('/', async (req, res) => {
-    try {
-      const product = await pm.addProduct(req.body);
+  
+  if (!mongoose.Types.ObjectId.isValid(pid)) {
+    return res.status(400).json({
+      status: "error",
+      error: "ID inválido"
+    });
+  }
 
-      const products = await pm.getProducts();
-      io.emit("updateProducts", products);
+  const product = await Product.findById(pid);
 
-      res.status(201).json(product);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
+  if (!product) {
+    return res.status(404).json({
+      status: "error",
+      error: "Producto no encontrado"
+    });
+  }
+
+  res.json({
+    status: "success",
+    payload: product
   });
+});
 
+router.delete("/:pid", async (req, res) => {
+  const { pid } = req.params;
 
-  router.delete('/:pid', async (req, res) => {
-    try {
-      const ok = await pm.deleteProduct(req.params.pid);
-      if (!ok) return res.status(404).json({ error: 'Producto no encontrado' });
+  if (!mongoose.Types.ObjectId.isValid(pid)) {
+    return res.status(400).json({
+      status: "error",
+      error: "ID inválido"
+    });
+  }
 
-      const products = await pm.getProducts();
-      io.emit("updateProducts", products);
+  const deleted = await Product.findByIdAndDelete(pid);
 
-      res.json({ message: "Producto eliminado" });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
+  if (!deleted) {
+    return res.status(404).json({
+      status: "error",
+      error: "Producto no encontrado"
+    });
+  }
+
+  res.json({
+    status: "success",
+    message: "Producto eliminado"
   });
+});
 
-  return router;
-};
+module.exports = router;
